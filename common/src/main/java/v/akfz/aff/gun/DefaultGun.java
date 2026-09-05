@@ -44,7 +44,7 @@ public class DefaultGun implements Gun {
 		this.currentFireMode = data.fireMods()[0];
 	}
 
-	private IFeedingSystem createFeedingSystem() {
+	protected IFeedingSystem createFeedingSystem() {
 		if (data.magazineSetting() == MagazineSetting.AMMO) {
 			return new DirectFeedingSystem(this, data.magazineCapacity(), data.hasChamber());
 		}
@@ -88,7 +88,7 @@ public class DefaultGun implements Gun {
 			return false;
 		}
 
-		if (currentFireMode == FireMode.SINGLE && !triggerReleased) {
+		if ((currentFireMode == FireMode.SINGLE || currentFireMode == FireMode.BURST) && !triggerReleased) {
 			return false;
 		}
 
@@ -108,7 +108,7 @@ public class DefaultGun implements Gun {
 		if (!canShoot(currentTime)) return ShootResult.FAILURE;
 
 		return switch (currentFireMode) {
-			case AUTO,BOLT,SINGLE -> fireSingle(level, player, muzzlePos, lookDir, currentTime);
+			case AUTO, BOLT, SINGLE -> fireSingle(level, player, muzzlePos, lookDir, currentTime);
 			case BURST -> fireBurst(level, player, muzzlePos, lookDir, currentTime);
 		};
 	}
@@ -142,6 +142,8 @@ public class DefaultGun implements Gun {
 		long firstBulletId = spawnBullet(level, muzzlePos, lookDir, firstAmmo, player);
 		sendRecoil(player, (float) (data.recoilBase() * getSpreadMultiplier(player)));
 
+		this.triggerReleased = false;
+
 		MinecraftServer server = level.getServer();
 		int currentTick = server.getTickCount();
 
@@ -163,8 +165,8 @@ public class DefaultGun implements Gun {
 
 		long totalBurstDurationMs = (long) (burstSize - 1) * delayTicks * 50L;
 		this.burstEndTime = currentTime + totalBurstDurationMs;
-
 		this.lastShotTime = currentTime;
+
 		return new ShootResult(true, firstBulletId, currentFireMode, firstAmmo);
 	}
 

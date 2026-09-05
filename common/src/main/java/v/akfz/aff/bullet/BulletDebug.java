@@ -43,6 +43,21 @@ public final class BulletDebug {
 		drawLine(level, pos, end, ParticleTypes.FLAME, 4);
 	}
 
+	public static void renderWind(ServerLevel level, Vec3 pos, Vec3 wind) {
+		if (wind.lengthSqr() < 1e-6) return;
+
+		double speed = wind.length();
+		double visualLength = Math.min(5.0, speed * 0.2);
+
+		Vec3 windDir = wind.normalize();
+		Vec3 endPos = pos.add(windDir.scale(visualLength));
+
+		drawLine(level, pos, endPos, ParticleTypes.CLOUD, 12);
+
+		send(level, ParticleTypes.FLAME, endPos.x, endPos.y, endPos.z, 4, 0.05, 0.05, 0.05, 0.0);
+		send(level, ParticleTypes.END_ROD, endPos.x, endPos.y, endPos.z, 1, 0.0, 0.0, 0.0, 0.0);
+	}
+
 	public static void renderHitPoint(ServerLevel level, Vec3 hitPos, boolean isEntity) {
 		if (isEntity) {
 			send(level, ParticleTypes.DAMAGE_INDICATOR, hitPos.x, hitPos.y, hitPos.z,

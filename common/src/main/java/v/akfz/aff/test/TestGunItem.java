@@ -6,7 +6,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -52,7 +51,7 @@ public class TestGunItem extends Item implements GunItem {
 		GunData data = GunRegistry.getGun(gunId);
 		if (data == null) return null;
 
-		DefaultGun gun = new DefaultGun(data, holder);
+		InfiniteGun gun = new InfiniteGun(GunRegistry.getGun(gunId), holder);
 		gun.loadFromNBT(stack.getOrCreateTag());
 		GUN_CACHE.put(stack, gun);
 		return gun;

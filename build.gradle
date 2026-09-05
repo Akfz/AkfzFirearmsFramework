@@ -11,6 +11,7 @@ buildscript {
 allprojects {
     apply plugin: 'java'
     apply plugin: 'maven-publish'
+    apply plugin: 'io.github.Akfz.jnih'
 
     def javaVer = Integer.parseInt(project.findProperty('java_version') ?: '17')
     java {

@@ -8,6 +8,7 @@ import v.akfz.aff.event.registry.PreLoadRegistryEvent;
 import v.akfz.aff.item.GItem;
 import v.akfz.aff.network.BindsSyncPacket;
 import v.akfz.aff.network.SyncRecoil;
+import v.akfz.aff.physics.cpp.NativeBallisticsLoader;
 import v.akfz.aslib.AsLib;
 import v.akfz.aslib.network.AsLibNetworking;
 import v.akfz.aslib.network.api.PacketHandler;
@@ -17,6 +18,11 @@ import v.akfz.db.generator.GenerateInitializer;
 public class AFFramework {
 
 	public void init() {
+		boolean isNativeReady = NativeBallisticsLoader.isLoaded();
+		if (isNativeReady) {
+			System.out.println("[AFF_NATIVE] native library loaded!");
+		}
+
 		AsLibNetworking.REGISTRY.register(new SyncRecoil(-1),new PacketHandler<>() {
 			@Override
 			public void handle(SyncRecoil packet) {

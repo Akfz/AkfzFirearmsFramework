@@ -11,7 +11,7 @@ package v.akfz.aff.bullet;
  * @param gravityMultiplier   Multiplier for gravitational pull (1.0 represents standard Minecraft gravity).
  * @param maxSubSteps         Maximum number of sub-steps for raycasting to prevent tunneling at high speeds.
  * @param penetrationPower    Base penetration capability of the projectile against materials.
- * @param allowFriendlyFire   Whether the bullet is allowed to damage the shooter or allied entities.
+ * @param allowFriendlyFire   Whether the bullet is allowed to damage the shooter or allied entities. (idk why in bullets, but it is)
  * @param damageMultiplier    Multiplier applied to the bullet's kinetic energy to calculate final Minecraft damage.
  * @param caliber             Physical diameter of the bullet in blocks (e.g., 0.00762 for 7.62mm),
  *                            used to slightly expand target hitboxes for realistic collision detection.
