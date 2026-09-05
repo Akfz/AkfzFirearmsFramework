@@ -1,0 +1,32 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="Open Source"
+
+[[mods]]
+modId="aff"
+version="1.0-SNAPSHOT"
+displayName="AkfzFirearmsFramework"
+logoFile="icon.png"
+authors="Akaize"
+description="""
+ChangeME!"""
+
+[[mixins]]
+config="aff.mixins.json"
+
+[[dependencies.aff]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
+    type="required"
+
+[[dependencies.aff]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"
+    type="required"
+

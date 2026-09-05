@@ -1,0 +1,196 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+    }
+    dependencies {
+        classpath "org.spongepowered:mixingradle:${project.mixingradle_version}"
+    }
+}
+
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+
+    def javaVer = Integer.parseInt(project.findProperty('java_version') ?: '17')
+    java {
+        sourceCompatibility = JavaVersion.toVersion(javaVer)
+        targetCompatibility = JavaVersion.toVersion(javaVer)
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(javaVer)
+        }
+    }
+
+    version = project.mod_version
+    group = project.maven_group
+}
+
+subprojects {
+    def javaVer = Integer.parseInt(project.findProperty('java_version') ?: '17')
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release = javaVer
+    }
+
+    tasks.named('processResources', ProcessResources).configure {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+        if (project.name == 'forge') {
+            exclude 'fabric.mod.json', 'quilt.mod.json', 'META-INF/neoforge.mods.toml'
+        } else if (project.name == 'neoforge') {
+            exclude 'fabric.mod.json', 'quilt.mod.json', 'META-INF/mods.toml'
+        } else if (project.name == 'fabric') {
+            exclude 'META-INF/mods.toml', 'META-INF/neoforge.mods.toml', 'pack.mcmeta'
+        }
+    }
+
+    configurations {
+        embed
+        implementation.extendsFrom(embed)
+    }
+
+    if (project.name != 'common') {
+        evaluationDependsOn(':common')
+
+        def commonProject = project(':common')
+        sourceSets.main.java.srcDirs = [commonProject.sourceSets.main.java.srcDirs, sourceSets.main.java.srcDirs].flatten()
+        sourceSets.main.resources.srcDirs = [commonProject.sourceSets.main.resources.srcDirs, sourceSets.main.resources.srcDirs].flatten()
+    }
+
+    repositories {
+        if (project.hasProperty('aslib_version') && project.aslib_version) {
+            maven { url = 'https://raw.githubusercontent.com/Akfz/AsLib/maven/' }
+        }
+        if (project.hasProperty('dbuild_version') && project.dbuild_version) {
+            maven { url = 'https://raw.githubusercontent.com/Akfz/DBuild/maven/' }
+        }
+    }
+
+    dependencies {
+        if (project.hasProperty('aslib_version') && project.aslib_version) {
+            def aslibDep = "v.akfz:aslib-${project.name}:${project.aslib_version}"
+            implementation aslibDep
+            annotationProcessor aslibDep
+        }
+        if (project.hasProperty('dbuild_version') && project.dbuild_version) {
+            def dbuildDep = "v.akfz:DBuild:${project.dbuild_version}"
+            compileOnly dbuildDep
+            annotationProcessor dbuildDep
+        }
+    }
+
+    tasks.withType(Jar).configureEach {
+        def dontCompileClasses = provider {
+            def excludedPrefixes = [] as Set
+
+            sourceSets.main.java.srcDirs.each { File srcDir ->
+                if (srcDir.exists()) {
+                    srcDir.eachFileRecurse { File file ->
+                        if (file.name.endsWith('.java')) {
+                            boolean found = false
+                            file.eachLine('UTF-8') { line ->
+                                if (line =~ /\b@DontCompile\b/) {
+                                    found = true
+                                    return false
+                                }
+                            }
+
+                            if (found) {
+                                String rel = srcDir.toPath().relativize(file.toPath()).toString().replace('\\', '/')
+                                excludedPrefixes.add(rel.substring(0, rel.length() - 5))
+                            }
+                        }
+                    }
+                }
+            }
+            return excludedPrefixes
+        }
+
+        exclude { element ->
+            if (element.name.endsWith('.class')) {
+                String path = element.path.replace('\\', '/')
+                return dontCompileClasses.get().any { prefix ->
+                    path.startsWith(prefix + '.') || path.startsWith(prefix + '$') || path == (prefix + '.class')
+                }
+            }
+            return false
+        }
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId = "${project.archives_base_name}-${project.name}"
+
+                from components.java
+            }
+        }
+        repositories {
+            maven {
+                name = "TargetMaven"
+                def pubUrl = project.findProperty('publishing_url')
+                if (pubUrl) {
+                    url = uri(pubUrl)
+                } else {
+                    url = uri(rootProject.layout.buildDirectory.dir("repo"))
+                }
+
+                if (project.hasProperty('publishing_username') && project.hasProperty('publishing_password')) {
+                    credentials {
+                        username = project.findProperty('publishing_username')
+                        password = project.findProperty('publishing_password')
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.register('cleanLibs') {
+    group = 'build'
+    description = 'Cleans only the libs directories of root and subprojects'
+    doLast {
+        delete rootProject.layout.buildDirectory.dir("libs")
+        subprojects.each { delete it.layout.buildDirectory.dir("libs") }
+    }
+}
+
+tasks.register('compileAll') {
+    group = 'build'
+    description = 'Cleans libs and builds all active modules, aggregating output release & dev JARs'
+    dependsOn 'cleanLibs'
+
+    def loaderProjects = subprojects.findAll { it.name in ['fabric', 'forge', 'neoforge'] }
+    dependsOn loaderProjects.collect { it.tasks.named('assemble') }
+
+    dependsOn loaderProjects.findAll { it.name in ['forge', 'neoforge'] }.collect { it.tasks.named('devJar') }
+
+    def commonProj = findProject(':common')
+    if (commonProj != null) {
+        dependsOn commonProj.tasks.named('jar')
+    }
+
+    doLast {
+        def modDir = layout.buildDirectory.dir("libs/mod").get().asFile
+        def devDir = layout.buildDirectory.dir("libs/dev").get().asFile
+        modDir.mkdirs()
+        devDir.mkdirs()
+
+        ['common', 'fabric', 'forge', 'neoforge'].each { platform ->
+            def subProj = findProject(":${platform}")
+            if (subProj == null) return
+            def buildLibs = subProj.layout.buildDirectory.dir("libs").get().asFile
+            if (!buildLibs.exists()) return
+
+            buildLibs.listFiles()?.each { jarFile ->
+                if (!jarFile.name.endsWith(".jar")) return
+                def targetDir = jarFile.name.contains("-dev") ? devDir : modDir
+                copy {
+                    from jarFile
+                    into targetDir
+                }
+            }
+        }
+    }
+}

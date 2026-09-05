@@ -1,0 +1,92 @@
+plugins {
+    id 'fabric-loom'
+    id 'maven-publish'
+}
+
+base {
+    archivesName = "${project.archives_base_name}-common"
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+}
+
+configurations {
+    embed
+    implementation.extendsFrom(embed)
+}
+
+sourceSets {
+    main {
+        resources.srcDirs += ['src/generated/resources']
+        java.srcDirs += ['src/generated/java']
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+
+    mappings loom.layered() {
+        officialMojangMappings()
+        def pMc = project.findProperty('parchment_mc_version') ?: project.minecraft_version
+        def pVer = project.findProperty('parchment_version') ?: ''
+        if (pVer) {
+            parchment("org.parchmentmc.data:parchment-${pMc}:${pVer}@zip")
+        }
+    }
+
+    compileOnly "org.spongepowered:mixin:${project.mixin_version}"
+    compileOnly "org.ow2.asm:asm:9.6"
+    compileOnly "org.ow2.asm:asm-tree:9.6"
+
+    def mixinExtrasVer = project.findProperty('mixinextras_version') ?: '0.4.1'
+    compileOnly "io.github.llamalad7:mixinextras-common:${mixinExtrasVer}"
+    annotationProcessor "io.github.llamalad7:mixinextras-common:${mixinExtrasVer}"
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    def props = rootProject.ext.find('modProperties') ?: [:]
+    inputs.properties props
+
+    filesMatching('fabric.mod.json') {
+        expand props
+    }
+}
+
+tasks.named('javadoc', Javadoc).configure {
+    options {
+        encoding = 'UTF-8'
+        charSet = 'UTF-8'
+        addStringOption('Xdoclint:none', '-quiet')
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    archiveFileName.set("${project.archives_base_name}-${project.mod_version}-common-dev.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("libs"))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.embed.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    manifest {
+        attributes([
+                'Specification-Title'     : project.archives_base_name,
+                'Specification-Vendor'    : project.maven_group,
+                'Specification-Version'   : project.mod_version,
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.mod_version,
+                'Implementation-Vendor'   : project.maven_group,
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << "-AmodLoaderTarget=common"
+}

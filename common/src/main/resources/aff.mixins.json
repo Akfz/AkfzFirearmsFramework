@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "v.akfz.aff.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "v.akfz.aslib.mixin.plugin.AsLibMixinPlugin",
+  "mixins": [
+    "MinecraftSrvMixin",
+    "client.MouseHandlerMixin",
+    "client.ClientMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

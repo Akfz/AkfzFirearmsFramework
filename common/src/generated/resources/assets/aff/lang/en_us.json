@@ -1,0 +1,12 @@
+{
+  "aff.ammo.tooltip.caliber": "§7Caliber: §f%smm",
+  "aff.ammo.tooltip.damage": "§7Damage mod: §f×%s",
+  "aff.ammo.tooltip.mass": "§7Mass: §f%sg",
+  "aff.ammo.tooltip.penetration": "§7Penetration mod: §f×%s",
+  "aff.ammo.tooltip.velocity": "§7Velocity: §f%s m/s",
+  "aff.gun.tooltip.error": "§cGun config not found: %s",
+  "aff.magazine.empty": "§cMagazine is empty!",
+  "aff.magazine.full": "§cMagazine is full!",
+  "aff.magazine.incompatible": "§cIncompatible ammo!",
+  "aff.magazine.tooltip.type": "§7Type: §f%s"
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "aff",
+  "version": "1.0-SNAPSHOT",
+  "name": "AkfzFirearmsFramework",
+  "description": "ChangeME!",
+  "license": "Open Source",
+  "icon": "assets/aff/icon.png",
+  "environment": "*",
+  "authors": [
+    "Akaize"
+  ],
+  "entrypoints": {
+    "main": [
+      "v.akfz.aff.AFFramework_fabric"
+    ]
+  },
+  "mixins": [
+    "aff.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.11",
+    "minecraft": "1.20.1"
+  }
+}
