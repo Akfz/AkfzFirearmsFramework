@@ -1,0 +1,12 @@
+{
+  "aff.ammo.tooltip.caliber": "§7Калибр: §f%sмм",
+  "aff.ammo.tooltip.damage": "§7Мод. урона: §f×%s",
+  "aff.ammo.tooltip.mass": "§7Масса: §f%sг",
+  "aff.ammo.tooltip.penetration": "§7Мод. пробития: §f×%s",
+  "aff.ammo.tooltip.velocity": "§7Скорость: §f%s м/с",
+  "aff.gun.tooltip.error": "§cНевозможно найти конфиг оружия %s",
+  "aff.magazine.empty": "§cМагазин пуст",
+  "aff.magazine.full": "§cМагазин полон!",
+  "aff.magazine.incompatible": "§cНе подходящий патрон",
+  "aff.magazine.tooltip.type": "§7Тип патрона: §f%s"
+}

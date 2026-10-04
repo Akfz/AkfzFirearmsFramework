@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "aff",
+  "version": "1.0-SNAPSHOT",
+  "name": "AKFZ Firearms Framework",
+  "description": "piu piu piu",
+  "license": "MIT",
+  "icon": "assets/aslib/icon.png",
+  "environment": "*",
+  "authors": [
+    "AKFZ"
+  ],
+  "entrypoints": {
+    "main": [
+      "v.akfz.aff.AFFramework_fabric"
+    ]
+  },
+  "mixins": [
+    "aff.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.11",
+    "minecraft": "1.20.1",
+    "aslib": ">=1.0"
+  }
+}

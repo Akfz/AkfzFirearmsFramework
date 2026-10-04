@@ -1,0 +1,277 @@
+buildscript {
+    repositories {
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+    }
+    dependencies {
+        classpath "org.spongepowered:mixingradle:${project.mixingradle_version}"
+    }
+}
+
+plugins {
+    id 'java'
+    id 'io.github.Akfz.dbg' version '1.0.1'
+    id 'io.github.Akfz.jnih' version '1.0.1'
+
+    id 'fabric-loom'               apply false
+    id 'net.minecraftforge.gradle' apply false
+    id 'net.neoforged.moddev'      apply false
+    id 'org.parchmentmc.librarian.forgegradle' apply false
+}
+
+jni {
+    tasks.named("checkJniImplementation") { enabled = false }
+
+    jdks {
+        windows = file("java_d/winjava")
+    }
+
+    buildNative {
+        enabled = true
+        workingDir = layout.projectDirectory.dir("src/cpp")
+        executable = "sh"
+        args = ["-c", "cmake -S . -B build && cmake --build build"]
+    }
+
+    crossCompile {
+        windows {
+            enabled = true
+            target = "windows"
+            workingDir = layout.projectDirectory.dir("src/cpp")
+            executable = "sh"
+            args = [
+                    "-c",
+                    "cmake -S . -B build-win -DCMAKE_TOOLCHAIN_FILE=mingw-toolchain.cmake && cmake --build build-win"
+            ]
+        }
+    }
+
+    buildNativeDocker {
+        enabled = false
+    }
+
+    packageNative {
+        run.libraries.from(files("src/cpp/build/libaff_physics.so"))
+        jar.libraries.from(files("src/cpp/build/libaff_physics.so"))
+
+        jar.platform.win.from(layout.projectDirectory.file("src/cpp/build-win/aff_physics.dll"))
+    }
+}
+
+def javaVer = Integer.parseInt(project.findProperty('java_version') ?: '17')
+java {
+    sourceCompatibility = JavaVersion.toVersion(javaVer)
+    targetCompatibility = JavaVersion.toVersion(javaVer)
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(javaVer)
+    }
+}
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+    if (project.hasProperty('aslib_version') && project.aslib_version) {
+        maven { url = 'https://raw.githubusercontent.com/Akfz/AsLib/maven/' }
+    }
+    if (project.hasProperty('dbuild_version') && project.dbuild_version) {
+        maven { url = 'https://raw.githubusercontent.com/Akfz/DBuild/maven/' }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release  = Integer.parseInt(project.findProperty('java_version') ?: '17')
+}
+
+sourceSets {
+    main {
+        java.srcDirs      = ['src/generated/java']
+        resources.srcDirs = ['src/generated/resources']
+    }
+}
+
+tasks.withType(ProcessResources).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+dbuild {
+    defaultLoader = 'fabric'
+
+    useLoaderSourceSet()
+    filterForeignMetadata()
+    dbuildannotations()
+
+    registryCommand 'runClient', 'fabric', 'forge'
+    registryCommand 'runServer', 'fabric', 'forge'
+    registryCommand 'build', 'fabric', 'forge'
+
+    fabric {
+        devJar()
+        obfJar()
+
+        configure {
+            apply plugin: 'fabric-loom'
+
+            base {
+                archivesName = "${project.archives_base_name}-fabric"
+            }
+
+            repositories {
+                mavenCentral()
+                maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+            }
+
+            dependencies {
+                minecraft "com.mojang:minecraft:${project.minecraft_version}"
+
+                mappings loom.layered() {
+                     officialMojangMappings()
+                     def pMc = project.findProperty('parchment_mc_version') ?: project.minecraft_version
+                     def pVer = project.findProperty('parchment_version') ?: ''
+                     if (pVer) {
+                        parchment("org.parchmentmc.data:parchment-${pMc}:${pVer}@zip")
+                     }
+                }
+                modImplementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
+
+                if (project.hasProperty('aslib_version') && project.aslib_version) {
+                    def aslibDep = "v.akfz:aslib-fabric:${project.aslib_version}"
+                    modImplementation aslibDep
+                    annotationProcessor aslibDep
+                }
+                if (project.hasProperty('dbuild_version') && project.dbuild_version) {
+                    def dbuildDep = "v.akfz:DBuild:${project.dbuild_version}"
+                    compileOnly dbuildDep
+                    annotationProcessor dbuildDep
+                }
+
+                def mixinExtrasVer = project.findProperty('mixinextras_version') ?: '0.4.1'
+                modCompileOnly "io.github.llamalad7:mixinextras-common:${mixinExtrasVer}"
+                annotationProcessor "io.github.llamalad7:mixinextras-common:${mixinExtrasVer}"
+            }
+
+            loom {
+                mixin {
+                    useLegacyMixinAp = true
+                    defaultRefmapName = "${project.findProperty('mixinfile') ?: project.mod_id}.refmap.json"
+                }
+
+                runs {
+                    client {
+                        client()
+                        runDir 'fabricRun'
+                    }
+                    server {
+                        server()
+                        runDir 'fabricRunServer'
+                    }
+                }
+            }
+
+            tasks.withType(JavaCompile).configureEach {
+                options.compilerArgs << "-AmodLoaderTarget=fabric"
+            }
+
+            tasks.named('remapJar').configure {
+                def embedConf = configurations.findByName('embed')
+                if (embedConf != null) {
+                    from { embedConf.collect { it.isDirectory() ? it : zipTree(it) } }
+                }
+            }
+
+            tasks.named('processResources', ProcessResources).configure {
+                def props = [
+                    mod_id        : project.mod_id,
+                    mod_name      : project.mod_id,
+                    mod_version   : project.mod_version,
+                    mod_authors   : project.findProperty('mod_authors') ?: '',
+                    mod_license   : project.findProperty('mod_license') ?: 'MIT',
+                    mod_description: project.findProperty('mod_description') ?: '',
+                    maven_group   : project.maven_group,
+                    archives_base_name: project.archives_base_name,
+                    version       : project.mod_version
+                ]
+                inputs.properties(props)
+                filesMatching('**/*.json') { expand(props) }
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE
+            }
+        }
+    }
+    forge {
+        devJar()
+        obfJar()
+
+        configure {
+            apply plugin: 'net.minecraftforge.gradle'
+            apply plugin: 'org.spongepowered.mixin'
+            apply plugin: 'org.parchmentmc.librarian.forgegradle'
+
+            minecraft {
+                mappings channel: 'parchment', version: "${parchment_version}-${parchment_mc_version}"
+
+                runs {
+                    configureEach {
+                        workingDirectory project.file('run')
+                        property 'forge.logging.markers', 'REGISTRIES'
+                        property 'forge.logging.console.level', 'debug'
+                        property 'forge.earlydisplay.enable', 'false'
+
+                        mods {
+                            "${project.mod_id}" {
+                                source sourceSets.main
+                            }
+                        }
+                    }
+
+                    def mixinConfigName = project.findProperty('mixinfile') ?: project.mod_id
+                    client {
+                        workingDirectory project.file('forgeRun')
+                        property 'mixin.config', "${mixinConfigName}.json"
+                    }
+                    server {
+                        workingDirectory project.file('forgeRunServer')
+                        property 'mixin.config', "${mixinConfigName}.json"
+                    }
+                }
+            }
+
+            dependencies {
+                minecraft "net.minecraftforge:forge:${project.forge_version}"
+                annotationProcessor "org.spongepowered:mixin:${project.mixin_version}:processor"
+
+                if (project.hasProperty('aslib_version') && project.aslib_version) {
+                    def aslibDep = "v.akfz:aslib-forge:${project.aslib_version}"
+                    implementation aslibDep
+                    annotationProcessor aslibDep
+                }
+                if (project.hasProperty('dbuild_version') && project.dbuild_version) {
+                    def dbuildDep = "v.akfz:DBuild:${project.dbuild_version}"
+                    compileOnly dbuildDep
+                    annotationProcessor dbuildDep
+                }
+
+                def mixinExtrasVer = project.findProperty('mixinextras_version') ?: '0.4.1'
+                embed "io.github.llamalad7:mixinextras-common:${mixinExtrasVer}"
+                annotationProcessor "io.github.llamalad7:mixinextras-common:${mixinExtrasVer}"
+            }
+
+            mixin {
+                def mixinConfigName = project.findProperty('mixinfile') ?: project.mod_id
+                add sourceSets.main, "${mixinConfigName}.refmap.json"
+                config "${mixinConfigName}.json"
+            }
+
+            tasks.withType(Jar).configureEach {
+                def mixinConfigName = project.findProperty('mixinfile') ?: project.mod_id
+                manifest {
+                    attributes 'MixinConfigs': "${mixinConfigName}.json"
+                }
+            }
+
+            tasks.withType(JavaCompile).configureEach {
+                options.compilerArgs << "-AmodLoaderTarget=forge"
+            }
+        }
+    }
+    
+}

@@ -1,0 +1,39 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="aff"
+version="1.0-SNAPSHOT"
+displayName="AKFZ Firearms Framework"
+logoFile="icon.png"
+authors="AKFZ"
+description='''piu piu piu'''
+
+[[mixins]]
+config="aff.mixins.json"
+
+[[dependencies.aff]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
+    type="required"
+
+[[dependencies.aff]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"
+    type="required"
+
+[[dependencies.aff]]
+    modId="aslib"
+    mandatory=true
+    versionRange=">=1.0"
+    ordering="NONE"
+    side="BOTH"
+    type="required"
+
